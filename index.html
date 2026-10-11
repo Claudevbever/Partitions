@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1524">
+<title>Mes partitions</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Partitions">
+
+
+<style>
+/* ==========================================================================
+   STYLE
+   Palette : bleu nuit (fond de scène) + jaune surligneur (accent).
+   Les pages PDF restent blanches : c'est le seul élément clair de l'écran.
+   ========================================================================== */
+:root{
+  --bg:#0f1524;      /* fond général            */
+  --panel:#172038;   /* barres et cartes        */
+  --panel2:#202b4a;  /* survol, boutons         */
+  --line:#2b3658;    /* traits fins             */
+  --ink:#e8ebf4;     /* texte                   */
+  --muted:#8d98b8;   /* texte secondaire        */
+  --accent:#f4d35e;  /* jaune surligneur        */
+  --on-accent:#1b1600;
+  --danger:#ff7a7a;
+  --serif: ui-serif, Georgia, "Times New Roman", serif;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--ink);
+  font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  overflow:hidden;-webkit-tap-highlight-color:transparent;
+}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+svg.i{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* ---------- Boutons communs ---------- */
+.btn{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 16px;border-radius:12px;background:var(--panel2);border:1px solid var(--line)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:transparent;font-weight:600}
+.tb{height:40px;min-width:40px;padding:0 10px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:none;white-space:nowrap}
+.tb:hover{background:var(--panel2)}
+.tb.on{background:var(--accent);color:var(--on-accent)}
+
+/* ==========================================================================
+   BIBLIOTHÈQUE
+   ========================================================================== */
+#library{position:fixed;inset:0;display:flex;flex-direction:column}
+.lib-head{
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;
+  padding:max(14px,env(safe-area-inset-top)) 16px 12px 18px;
+  border-bottom:1px solid var(--line);
+}
+.brand{font:600 28px/1 var(--serif);margin-right:auto;min-width:150px}
+.brand small{display:block;font:400 13px system-ui,sans-serif;color:var(--muted);margin-top:6px}
+.search{flex:1 1 220px;max-width:420px;display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;color:var(--muted)}
+.search input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--ink);font:inherit}
+
+/* Menu des sections : Tous, #, A … Z */
+#letterMenu{display:flex;gap:6px;flex:none;padding:10px 16px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line)}
+#letterMenu::-webkit-scrollbar{display:none}
+.chip{flex:none;min-width:40px;height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);
+  font:600 16px var(--serif);display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.chip small{font:400 12px system-ui,sans-serif;color:var(--muted)}
+.chip:hover{background:var(--panel2)}
+.chip.on{background:var(--accent);color:var(--on-accent);border-color:transparent}
+.chip.on small{color:var(--on-accent)}
+.chip:disabled{opacity:.3;cursor:default}
+
+#listScroll{position:relative;flex:1;overflow-y:auto;padding-right:40px;padding-bottom:60px;overscroll-behavior:contain}
+.group h2{
+  position:sticky;top:0;z-index:2;background:var(--bg);
+  font:600 26px/1 var(--serif);color:var(--accent);
+  padding:14px 20px 8px;border-bottom:1px solid var(--line);
+}
+.row{display:flex;align-items:center;gap:4px;padding:0 6px 0 20px;border-bottom:1px solid var(--line)}
+.row-main{flex:1;min-width:0;padding:12px 0;cursor:pointer}
+.row-title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-sub{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.ico{width:40px;height:40px;display:grid;place-items:center;border-radius:10px;color:var(--muted)}
+.ico:hover{background:var(--panel2);color:var(--ink)}
+.ico.del:hover{color:var(--danger)}
+.row:hover{background:rgba(255,255,255,.03)}
+
+#empty{padding:64px 28px;text-align:center;color:var(--muted);max-width:460px;margin:0 auto}
+#empty strong{display:block;font:600 22px var(--serif);color:var(--ink);margin-bottom:8px}
+
+/* Barre d'index alphabétique (côté droit) */
+#alpha{
+  position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:5;
+  width:34px;height:min(78vh,640px);padding:6px 0;
+  display:flex;flex-direction:column;justify-content:space-between;align-items:center;
+  touch-action:none;user-select:none;-webkit-user-select:none;
+  background:linear-gradient(90deg,transparent,rgba(15,21,36,.92) 45%);
+}
+#alpha span{font:600 11px/1 system-ui,sans-serif;padding:1px 6px;cursor:pointer}
+#alpha span.off{color:#4d5878}
+#bubble{
+  position:fixed;right:58px;top:50%;transform:translateY(-50%);z-index:6;
+  width:76px;height:76px;border-radius:18px;display:grid;place-items:center;
+  background:var(--accent);color:var(--on-accent);font:700 40px var(--serif);
+  box-shadow:0 8px 28px rgba(0,0,0,.45);
+}
+
+/* ==========================================================================
+   LECTEUR
+   ========================================================================== */
+#viewer{position:fixed;inset:0;z-index:20;background:#0a0f1c;display:flex;flex-direction:column}
+#vbar{
+  display:flex;align-items:center;gap:6px;flex:none;
+  padding:max(8px,env(safe-area-inset-top)) 10px 8px;
+  background:var(--panel);border-bottom:1px solid var(--line);
+  overflow-x:auto;scrollbar-width:none;
+}
+#vbar::-webkit-scrollbar{display:none}
+.vtitle{font:600 16px var(--serif);min-width:90px;max-width:26vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pageinfo{color:var(--muted);font-size:14px;min-width:54px;flex:none;font-variant-numeric:tabular-nums}
+.grp{display:flex;align-items:center;gap:4px;padding-left:8px;margin-left:2px;border-left:1px solid var(--line);flex:none}
+#speed{width:120px;accent-color:var(--accent)}
+#speedVal{min-width:26px;text-align:center;font-variant-numeric:tabular-nums;color:var(--muted)}
+#playBtn.on{background:var(--accent);color:var(--on-accent)}
+
+#scroller{
+  flex:1;min-height:0;position:relative;overflow:auto;
+  overscroll-behavior:contain;scrollbar-gutter:stable;
+}
+#pages{width:max-content;min-width:100%;padding:12px}
+.page{position:relative;margin:0 auto 12px;background:#fff;border-radius:2px;box-shadow:0 8px 28px rgba(0,0,0,.55)}
+.page canvas{position:absolute;inset:0;width:100%;height:100%}
+.page canvas.ann{pointer-events:none}
+#viewer.drawing .page canvas.ann{pointer-events:auto;touch-action:none;cursor:crosshair}
+.note-badge{
+  position:absolute;top:8px;right:8px;z-index:3;width:34px;height:34px;border-radius:50%;
+  display:grid;place-items:center;background:var(--accent);color:var(--on-accent);
+  box-shadow:0 2px 8px rgba(0,0,0,.4);
+}
+#vLoading{position:absolute;inset:0;top:60px;display:grid;place-items:center;color:var(--muted);pointer-events:none}
+
+/* Barre d'annotation : flotte au-dessus de la page (n'agrandit pas le lecteur) */
+#annotBar{
+  position:absolute;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:15;
+  display:flex;align-items:center;gap:6px;max-width:calc(100vw - 16px);overflow-x:auto;
+  padding:8px 10px;background:var(--panel);border:1px solid var(--line);border-radius:16px;
+  box-shadow:0 10px 30px rgba(0,0,0,.5);
+}
+.swatch{width:30px;height:30px;border-radius:50%;border:2px solid transparent;flex:none;box-shadow:inset 0 0 0 2px rgba(255,255,255,.18)}
+.swatch.on{border-color:var(--ink)}
+
+/* Mini-commandes quand la barre du haut est masquée */
+#mini{position:absolute;top:max(10px,env(safe-area-inset-top));right:14px;z-index:15;display:none;gap:4px;
+  padding:4px;background:var(--panel);border:1px solid var(--line);border-radius:14px;opacity:.92}
+#viewer.bar-hidden #vbar{display:none}
+#viewer.bar-hidden #mini{display:flex}
+#miniPlay.on{background:var(--accent);color:var(--on-accent)}
+
+/* ==========================================================================
+   NOTES + MESSAGES
+   ========================================================================== */
+#notesModal{position:fixed;inset:0;z-index:40;background:rgba(5,8,16,.65);display:grid;place-items:center;padding:16px}
+.sheet{width:min(560px,100%);background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;display:grid;gap:12px}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;font:600 18px var(--serif)}
+.sheet select,.sheet textarea{width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit}
+.sheet textarea{min-height:170px;resize:vertical}
+#toast{
+  position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;
+  max-width:min(92vw,520px);padding:12px 18px;border-radius:12px;
+  background:var(--ink);color:var(--bg);font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.5);
+}
+#dropHint{position:fixed;inset:10px;z-index:50;border:2px dashed var(--accent);border-radius:20px;background:rgba(15,21,36,.85);
+  display:grid;place-items:center;font:600 24px var(--serif);color:var(--accent);pointer-events:none}
+</style>
+</head>
+
+<body>
+
+<!-- ===================== BIBLIOTHÈQUE ===================== -->
+<main id="library">
+  <header class="lib-head">
+    <div class="brand">Partitions<small id="count"></small></div>
+    <label class="search">
+      <span data-icon="search"></span>
+      <input id="q" type="search" placeholder="Rechercher un morceau" autocomplete="off">
+    </label>
+    <button class="btn primary" id="btnImport"><span data-icon="upload"></span>Importer des PDF</button>
+    <button class="btn" id="btnFolder"><span data-icon="folder"></span>Importer un dossier</button>
+    <input id="fileInput" type="file" accept="application/pdf,.pdf" multiple hidden>
+    <input id="folderInput" type="file" webkitdirectory multiple hidden>
+  </header>
+
+  <nav id="letterMenu" aria-label="Sections alphabétiques"></nav>
+
+  <div id="listScroll">
+    <div id="list"></div>
+    <div id="empty" hidden>
+      <strong>Aucune partition pour l'instant</strong>
+      Importe tes PDF avec le bouton « Importer des PDF », ou glisse-les dans cette fenêtre.
+    </div>
+  </div>
+
+  <nav id="alpha" aria-label="Index alphabétique"></nav>
+  <div id="bubble" hidden></div>
+</main>
+
+<!-- ===================== LECTEUR ===================== -->
+<section id="viewer" hidden>
+  <header id="vbar">
+    <button class="tb" id="vBack" title="Retour à la bibliothèque"><span data-icon="back"></span></button>
+    <div class="vtitle" id="vTitle"></div>
+    <div class="pageinfo" id="pageInfo"></div>
+
+    <div class="grp">
+      <button class="tb" id="fitBtn" title="Ajustement à l'écran : Auto / Largeur / Page entière">
+        <span data-icon="fit"></span><span id="fitLabel">Auto</span>
+      </button>
+      <button class="tb" id="zoomOut" title="Réduire"><span data-icon="minus"></span></button>
+      <button class="tb" id="zoomIn"  title="Agrandir"><span data-icon="plus"></span></button>
+    </div>
+
+    <div class="grp">
+      <button class="tb" id="playBtn" title="Défilement automatique (barre d'espace)"><span data-icon="play"></span></button>
+      <input id="speed" type="range" min="1" max="10" step="0.5" value="4" aria-label="Vitesse de défilement">
+      <output id="speedVal">4</output>
+    </div>
+
+    <div class="grp">
+      <button class="tb" id="inkBtn"><span data-icon="pen"></span>Annoter</button>
+      <button class="tb" id="notesBtn"><span data-icon="note"></span>Notes</button>
+      <button class="tb" id="hideBar" title="Masquer la barre"><span data-icon="up"></span></button>
+    </div>
+  </header>
+
+  <div id="scroller"><div id="pages"></div></div>
+
+  <div id="annotBar" hidden>
+    <button class="tb on" data-tool="pen">Stylo</button>
+    <button class="tb" data-tool="hl">Surligneur</button>
+    <button class="tb" data-tool="eraser">Gomme</button>
+    <span id="colors" style="display:flex;gap:6px;padding:0 6px"></span>
+    <button class="tb" id="undoBtn"><span data-icon="undo"></span>Annuler</button>
+    <button class="tb" id="clearBtn"><span data-icon="trash"></span>Effacer la page</button>
+  </div>
+
+  <div id="mini">
+    <button class="tb" id="miniPlay" title="Lecture / pause"><span data-icon="play"></span></button>
+    <button class="tb" id="miniShow" title="Afficher la barre"><span data-icon="down"></span></button>
+  </div>
+  <div id="vLoading">Chargement…</div>
+</section>
+
+<!-- ===================== NOTES ===================== -->
+<div id="notesModal" hidden>
+  <div class="sheet" role="dialog" aria-label="Notes">
+    <div class="sheet-head">Notes<button class="tb" id="notesClose" title="Fermer"><span data-icon="close"></span></button></div>
+    <select id="noteTarget" aria-label="Sur quoi porte la note ?"></select>
+    <textarea id="noteText" placeholder="Tempo, nuances, reprises, doigtés…"></textarea>
+  </div>
+</div>
+
+<div id="toast" hidden></div>
+<div id="dropHint" hidden>Dépose tes PDF ici</div>
+
+<script>
+'use strict';
+/* ==========================================================================
+   SOMMAIRE DU CODE
+   0. Outils (icônes, messages…)
+   1. Stockage local (IndexedDB)  → DB
+   2. Chargement de pdf.js
+   3. Bibliothèque : import, tri A-Z, groupes par lettre, index latéral
+   4. Lecteur : ouverture, ajustement à l'écran, rendu des pages
+   5. Défilement automatique
+   6. Annotations : dessin, gomme, notes
+   7. Raccourcis clavier et démarrage
+   ========================================================================== */
+
+
+/* ==========================================================================
+   0. OUTILS
+   ========================================================================== */
+const $  = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+// Minuscules sans accents : "Étude" → "etude" (pour la recherche et le tri)
+const norm = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+// Petites icônes SVG (style "trait fin")
+const ICONS = {
+  back:   '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
+  play:   '<polygon points="6 3 20 12 6 21 6 3"/>',
+  pause:  '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>',
+  plus:   '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  minus:  '<line x1="5" y1="12" x2="19" y2="12"/>',
+  pen:    '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>',
+  edit:   '<path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>',
+  trash:  '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>',
+  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+  folder: '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
+  note:   '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+  fit:    '<path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>',
+  undo:   '<polyline points="1 4 1 10 7 10"/><path d="M3.5 15a9 9 0 1 0 2.1-9.4L1 10"/>',
+  search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  close:  '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  up:     '<polyline points="18 15 12 9 6 15"/>',
+  down:   '<polyline points="6 9 12 15 18 9"/>',
+};
+const svg = (name) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
+// Remplace chaque <span data-icon="xxx"> par l'icône correspondante
+const hydrateIcons = () => $$('[data-icon]').forEach(n => { n.innerHTML = svg(n.dataset.icon); });
+const setIcon = (btn, name) => { $('[data-icon]', btn).innerHTML = svg(name); };
+
+// Message éphémère en bas de l'écran
+let toastTimer;
+function toast(msg, ms = 2600) {
+  const t = $('#toast');
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, ms);
+}
+const formatSize = (b) => b < 1e6 ? Math.max(1, Math.round(b / 1e3)) + ' Ko' : (b / 1e6).toFixed(1) + ' Mo';
+
+
+/* ==========================================================================
+   1. STOCKAGE LOCAL (IndexedDB) — fonctionne hors-ligne
+   Trois "tiroirs" :
+     scores → infos de chaque morceau (titre, note, vitesse…)
+     files  → le fichier PDF lui-même (clé = id du morceau)
+     annots → dessins et notes de page (clé = id du morceau)
+   ========================================================================== */
+let dbPromise;
+function openDB() {
+  return dbPromise ||= new Promise((resolve, reject) => {
+    const req = indexedDB.open('partitions-db', 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      db.createObjectStore('scores', { keyPath: 'id', autoIncrement: true });
+      db.createObjectStore('files');
+      db.createObjectStore('annots');
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror   = () => reject(req.error);
+  });
+}
+async function dbRequest(store, mode, makeRequest) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx  = db.transaction(store, mode);
+    const req = makeRequest(tx.objectStore(store));
+    tx.oncomplete = () => resolve(req.result);
+    tx.onerror = tx.onabort = () => reject(tx.error);
+  });
+}
+const DB = {
+  all: (store)           => dbRequest(store, 'readonly',  (o) => o.getAll()),
+  get: (store, key)      => dbRequest(store, 'readonly',  (o) => o.get(key)),
+  put: (store, val, key) => dbRequest(store, 'readwrite', (o) => key === undefined ? o.put(val) : o.put(val, key)),
+  del: (store, key)      => dbRequest(store, 'readwrite', (o) => o.delete(key)),
+};
+
+
+/* ==========================================================================
+   2. CHARGEMENT DE pdf.js
+   On cherche d'abord les fichiers dans le dossier lib/ (100 % hors-ligne),
+   sinon on les télécharge depuis Internet (cdnjs).
+   ========================================================================== */
+const PDFJS_VERSION = '3.11.174';
+const PDFJS_CDN = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/`;
+let pdfJsPromise;
+
+const loadScript = (src) => new Promise((resolve, reject) => {
+  const s = document.createElement('script');
+  s.src = src; s.onload = resolve; s.onerror = reject;
+  document.head.appendChild(s);
+});
+
+function ensurePdfJs() {
+  if (pdfJsPromise) return pdfJsPromise;
+  pdfJsPromise = (async () => {
+    for (const base of ['lib/', PDFJS_CDN]) {
+      try {
+        await loadScript(base + 'pdf.min.js');
+        pdfjsLib.GlobalWorkerOptions.workerSrc = base + 'pdf.worker.min.js';
+        return;
+      } catch (e) { /* on essaie la source suivante */ }
+    }
+    throw new Error('Bibliothèque pdf.js introuvable. Place pdf.min.js et pdf.worker.min.js dans le dossier « lib » (voir LISEZMOI).');
+  })();
+  pdfJsPromise.catch(() => { pdfJsPromise = null; });   // permet de réessayer plus tard
+  return pdfJsPromise;
+}
+
+
+/* ==========================================================================
+   3. BIBLIOTHÈQUE
+   ========================================================================== */
+const listScroll = $('#listScroll'), listEl = $('#list'), alphaEl = $('#alpha'), bubbleEl = $('#bubble');
+const ALPHABET = ['#', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];   // "#" = titres qui commencent par un chiffre ou un symbole
+const collator = new Intl.Collator('fr', { sensitivity: 'base', numeric: true });   // tri A-Z "à la française" (é = e, 2 avant 10)
+
+let library = [];            // infos des morceaux (sans le PDF, pour rester léger)
+let query = '';              // texte de la recherche
+const letterMenu = $('#letterMenu');
+let sectionFilter = null;    // lettre de la section affichée (null = « Tous »)
+const groupEls = new Map();  // lettre → élément <section> correspondant
+
+/** Lettre de groupe d'un titre : "Étude n°3" → "E", "1812" → "#" */
+function letterOf(title) {
+  const c = norm(title.trim()).charAt(0).toUpperCase();
+  return /[A-Z]/.test(c) ? c : '#';
+}
+const cleanTitle = (fileName) => fileName.replace(/\.pdf$/i, '').replace(/_+/g, ' ').trim();
+
+async function refreshLibrary() {
+  library = await DB.all('scores');
+  renderLibrary();
+}
+
+/** Affiche la liste triée, groupée par lettre, et met à jour l'index latéral. */
+function renderLibrary() {
+  const q = norm(query.trim());
+  const matches = library
+    .filter((s) => !q || norm(s.title).includes(q))
+    .sort((a, b) => collator.compare(a.title, b.title));
+
+  // 1) Regrouper par lettre
+  const groups = new Map();
+  for (const s of matches) {
+    const L = letterOf(s.title);
+    if (!groups.has(L)) groups.set(L, []);
+    groups.get(L).push(s);
+  }
+  if (sectionFilter && !groups.has(sectionFilter)) sectionFilter = null;   // section devenue vide : retour à « Tous »
+  const items = sectionFilter ? groups.get(sectionFilter) : matches;
+
+  // 2) Construire le HTML (textContent = pas d'injection possible via un titre)
+  listEl.innerHTML = '';
+  groupEls.clear();
+  for (const L of ALPHABET) {
+    if (!groups.has(L) || (sectionFilter && L !== sectionFilter)) continue;
+    const section = document.createElement('section');
+    section.className = 'group';
+    section.innerHTML = '<h2></h2><ul style="list-style:none;padding:0"></ul>';
+    $('h2', section).textContent = L;
+    const ul = $('ul', section);
+    for (const s of groups.get(L)) ul.appendChild(buildRow(s));
+    listEl.appendChild(section);
+    groupEls.set(L, section);
+  }
+
+  // 3) Index latéral : lettres sans morceau = grisées
+  alphaEl.innerHTML = ALPHABET.map((l) => `<span data-l="${l}" class="${groupEls.has(l) ? '' : 'off'}">${l}</span>`).join('');
+  alphaEl.hidden = !!sectionFilter;      // inutile quand une seule section est affichée
+
+  // 4) Menu des sections : Tous, #, A … Z (avec le nombre de morceaux de chaque section)
+  letterMenu.hidden = library.length === 0;
+  letterMenu.innerHTML =
+    `<button class="chip${sectionFilter ? '' : ' on'}" data-l="">Tous<small>${matches.length}</small></button>` +
+    ALPHABET.map((l) => {
+      const n = groups.get(l)?.length || 0;
+      return `<button class="chip${l === sectionFilter ? ' on' : ''}" data-l="${l}"${n ? '' : ' disabled'}>${l}${n ? `<small>${n}</small>` : ''}</button>`;
+    }).join('');
+
+  $('#empty').hidden = library.length > 0;
+  $('#count').textContent = library.length
+    ? `${items.length}${items.length !== library.length ? ' / ' + library.length : ''} morceau${library.length > 1 ? 'x' : ''}`
+    : '';
+}
+
+function buildRow(s) {
+  const li = document.createElement('li');
+  li.className = 'row'; li.dataset.id = s.id;
+  li.innerHTML = `
+    <div class="row-main"><div class="row-title"></div><div class="row-sub"></div></div>
+    <button class="ico" data-act="rename" title="Renommer">${svg('edit')}</button>
+    <button class="ico del" data-act="delete" title="Supprimer">${svg('trash')}</button>`;
+  $('.row-title', li).textContent = s.title;
+  const bits = [formatSize(s.size)];
+  if (s.pages) bits.push(s.pages + ' p.');
+  if (s.note)  bits.push(s.note.replace(/\s+/g, ' ').slice(0, 60));
+  $('.row-sub', li).textContent = bits.join('  ·  ');
+  return li;
+}
+
+// Clic sur une ligne : ouvrir / renommer / supprimer
+listEl.addEventListener('click', (e) => {
+  const row = e.target.closest('.row'); if (!row) return;
+  const id = Number(row.dataset.id);
+  const act = e.target.closest('[data-act]')?.dataset.act;
+  if (act === 'rename') return renameScore(id);
+  if (act === 'delete') return deleteScore(id);
+  openScore(id);
+});
+
+async function renameScore(id) {
+  const s = library.find((x) => x.id === id); if (!s) return;
+  const t = prompt('Nouveau titre :', s.title);
+  if (t && t.trim()) { s.title = t.trim(); await DB.put('scores', s); renderLibrary(); }
+}
+async function deleteScore(id) {
+  const s = library.find((x) => x.id === id); if (!s) return;
+  if (!confirm(`Supprimer « ${s.title} » (avec ses annotations) ?`)) return;
+  await Promise.all([DB.del('scores', id), DB.del('files', id), DB.del('annots', id)]);
+  await refreshLibrary();
+  toast('Partition supprimée');
+}
+
+$('#q').addEventListener('input', (e) => { query = e.target.value; renderLibrary(); });
+
+// Menu des sections : un clic sur une lettre n'affiche que les morceaux de cette section
+letterMenu.addEventListener('click', (e) => {
+  const b = e.target.closest('.chip'); if (!b || b.disabled) return;
+  sectionFilter = b.dataset.l || null;
+  renderLibrary();
+  listScroll.scrollTop = 0;
+});
+
+/* ----- Index alphabétique : toucher ou glisser le long de la barre ----- */
+function jumpToLetter(clientY) {
+  const r = alphaEl.getBoundingClientRect();
+  const idx = clamp(Math.floor((clientY - r.top) / r.height * ALPHABET.length), 0, ALPHABET.length - 1);
+  // Lettre vide ? On saute à la suivante qui existe (sinon à la précédente).
+  let target = null;
+  for (let k = idx; k < ALPHABET.length && !target; k++) if (groupEls.has(ALPHABET[k])) target = ALPHABET[k];
+  for (let k = idx; k >= 0 && !target; k--)              if (groupEls.has(ALPHABET[k])) target = ALPHABET[k];
+  bubbleEl.textContent = ALPHABET[idx]; bubbleEl.hidden = false;
+  if (target) listScroll.scrollTop = groupEls.get(target).offsetTop;
+}
+alphaEl.addEventListener('pointerdown', (e) => { alphaEl.setPointerCapture(e.pointerId); jumpToLetter(e.clientY); });
+alphaEl.addEventListener('pointermove', (e) => { if (alphaEl.hasPointerCapture(e.pointerId)) jumpToLetter(e.clientY); });
+['pointerup', 'pointercancel'].forEach((ev) => alphaEl.addEventListener(ev, () => { bubbleEl.hidden = true; }));
+
+/* ----- Importation (fichiers, dossier, glisser-déposer) ----- */
+async function importFiles(fileList) {
+  const files = [...fileList].filter((f) => /\.pdf$/i.test(f.name) || f.type === 'application/pdf');
+  if (!files.length) return toast('Aucun fichier PDF trouvé.');
+  let added = 0, skipped = 0, failed = 0;
+
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    toast(`Importation ${i + 1} / ${files.length}…`, 60000);
+    // Même nom + même taille = déjà importé
+    if (library.some((s) => s.fileName === f.name && s.size === f.size)) { skipped++; continue; }
+    let id;
+    try {
+      const buffer = await f.arrayBuffer();
+      id = await DB.put('scores', { title: cleanTitle(f.name), fileName: f.name, size: f.size, addedAt: Date.now(), note: '', pages: null, speed: 4 });
+      await DB.put('files', buffer, id);
+      library.push({ id, title: cleanTitle(f.name), fileName: f.name, size: f.size, note: '', pages: null, speed: 4 });
+      added++;
+    } catch (err) {
+      console.error(err); failed++;
+      if (id) DB.del('scores', id).catch(() => {});   // on ne garde pas un morceau sans fichier
+    }
+  }
+  await refreshLibrary();
+  const parts = [`${added} ajoutée${added > 1 ? 's' : ''}`];
+  if (skipped) parts.push(`${skipped} déjà présente${skipped > 1 ? 's' : ''}`);
+  if (failed)  parts.push(`${failed} en échec (espace de stockage plein ?)`);
+  toast(parts.join(' · '), 4500);
+}
+
+$('#btnImport').onclick = () => $('#fileInput').click();
+$('#btnFolder').onclick = () => $('#folderInput').click();
+for (const id of ['#fileInput', '#folderInput']) {
+  $(id).addEventListener('change', (e) => { importFiles(e.target.files); e.target.value = ''; });
+}
+let dragDepth = 0;
+window.addEventListener('dragenter', (e) => { e.preventDefault(); dragDepth++; $('#dropHint').hidden = false; });
+window.addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; $('#dropHint').hidden = true; } });
+window.addEventListener('dragover',  (e) => e.preventDefault());
+window.addEventListener('drop', (e) => { e.preventDefault(); dragDepth = 0; $('#dropHint').hidden = true; importFiles(e.dataTransfer.files); });
+
+
+/* ==========================================================================
+   4. LECTEUR
+   Toutes les pages sont empilées verticalement dans #scroller (indispensable
+   pour le défilement automatique). Chaque page est un <div class="page"> qui
+   contient 2 canvas : le PDF, et par-dessus le calque d'annotation.
+   Pour économiser la mémoire, seules les pages proches de l'écran sont dessinées.
+   ========================================================================== */
+const scroller = $('#scroller'), pagesEl = $('#pages'), viewerEl = $('#viewer');
+const loadingEl = $('#vLoading'), pageInfoEl = $('#pageInfo');
+const FIT_LABELS = { auto: 'Auto', width: 'Largeur', page: 'Page' };
+
+const freshViewerState = () => ({
+  score: null,            // infos du morceau ouvert (même objet que dans `library`)
+  pdf: null,              // document pdf.js
+  pages: [],              // une entrée par page : { num, page, w, h, scale, wrap, canvas, ann, ... }
+  visible: new Set(),     // index des pages actuellement proches de l'écran
+  observer: null, ro: null,
+  mode: 'auto',           // auto | width | page
+  zoom: 1,                // multiplicateur (boutons + / −)
+  annots: { drawings: {}, notes: {} },
+  history: [],            // pour le bouton « Annuler »
+  ink: false,             // mode annotation actif ?
+  dirty: false, metaDirty: false, saveT: 0, metaT: 0, raf: 0,
+});
+let V = freshViewerState();
+
+async function openScore(id) {
+  if (V.score) return;
+  const meta = library.find((s) => s.id === id); if (!meta) return;
+  V = freshViewerState(); V.score = meta;
+
+  viewerEl.hidden = false;
+  try { history.pushState({ viewer: true }, ''); } catch (e) { /* sans importance */ }
+  $('#vTitle').textContent = meta.title;
+  loadingEl.hidden = false; loadingEl.textContent = 'Chargement…';
+  Auto.speed = meta.speed || 4; $('#speed').value = Auto.speed; $('#speedVal').textContent = Auto.speed;
+  $('#fitLabel').textContent = FIT_LABELS.auto;
+  setInk(false); keepAwake(true);
+
+  try {
+    const [buffer, annots] = await Promise.all([DB.get('files', id), DB.get('annots', id)]);
+    if (!buffer) throw new Error('Le fichier PDF est introuvable dans le stockage local.');
+    V.annots = { drawings: annots?.drawings || {}, notes: annots?.notes || {} };
+
+    await ensurePdfJs();
+    const task = pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
+    task.onPassword = (provide, reason) => {
+      const pw = prompt(reason === 1 ? 'Ce PDF est protégé. Mot de passe :' : 'Mot de passe incorrect, réessaie :');
+      if (pw) provide(pw); else task.destroy();
+    };
+    const pdf = await task.promise;
+    if (V.score !== meta) { pdf.destroy(); return; }          // fermé pendant le chargement
+    V.pdf = pdf;
+
+    // Dimensions de chaque page (échelle 1) : sert à calculer l'ajustement
+    for (let n = 1; n <= pdf.numPages; n++) {
+      const page = await pdf.getPage(n);
+      if (V.score !== meta) return;
+      const vp = page.getViewport({ scale: 1 });
+      V.pages.push({ num: n, page, w: vp.width, h: vp.height, scale: 1 });
+      if (n % 10 === 0) loadingEl.textContent = `Chargement… ${n} / ${pdf.numPages}`;
+    }
+    if (meta.pages !== pdf.numPages) { meta.pages = pdf.numPages; scheduleMetaSave(); }
+
+    buildPages();
+    V.ro = new ResizeObserver(debounce(layoutPages, 120));   // rotation de l'écran, redimensionnement…
+    V.ro.observe(scroller);
+    layoutPages();
+    scroller.scrollTop = 0;
+    loadingEl.hidden = true;
+  } catch (err) {
+    console.error(err);
+    toast(err.message || 'Impossible d\'ouvrir cette partition.', 6000);
+    requestClose();
+  }
+}
+
+function requestClose() {
+  if (history.state?.viewer) history.back(); else closeViewer();
+}
+window.addEventListener('popstate', () => { if (!viewerEl.hidden) closeViewer(); });
+
+async function closeViewer() {
+  if (!V.score) return;
+  autoStop(); setInk(false); closeNotes(); keepAwake(false);
+  V.ro?.disconnect(); V.observer?.disconnect();
+  clearTimeout(V.saveT); clearTimeout(V.metaT);
+  const pending = [saveAnnotsNow(), saveMetaNow()];    // on sauvegarde tout avant de quitter
+  V.pdf?.destroy?.();
+  pagesEl.innerHTML = '';
+  V = freshViewerState();
+  viewerEl.hidden = true;
+  viewerEl.classList.remove('bar-hidden');
+  await Promise.allSettled(pending);
+  renderLibrary();
+}
+
+/** Crée un <div> vide par page ; l'IntersectionObserver déclenche le dessin des pages visibles. */
+function buildPages() {
+  pagesEl.innerHTML = '';
+  V.observer = new IntersectionObserver(onIntersect, { root: scroller, rootMargin: '150% 0px' });
+  V.pages.forEach((pg, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'page'; wrap.dataset.i = i;
+    const badge = document.createElement('button');
+    badge.className = 'note-badge'; badge.title = 'Voir la note de cette page'; badge.hidden = true;
+    badge.innerHTML = svg('note');
+    badge.onclick = () => openNotes(String(pg.num));
+    wrap.appendChild(badge);
+    Object.assign(pg, { wrap, badge, canvas: null, ann: null, task: null, taskScale: null, doneScale: null });
+    pagesEl.appendChild(wrap);
+    V.observer.observe(wrap);
+  });
+  refreshBadges();
+}
+
+function onIntersect(entries) {
+  for (const en of entries) {
+    const i = Number(en.target.dataset.i);
+    if (en.isIntersecting) { V.visible.add(i); renderPage(i); }
+    else                   { V.visible.delete(i); releasePage(i); }
+  }
+}
+
+/* ----- Ajustement automatique à l'écran (Fit to Screen) -----
+   Largeur : la page occupe toute la largeur de l'écran.
+   Page    : la page entière tient à l'écran (hauteur ET largeur).
+   Auto    : écran en portrait → Largeur ; écran en paysage → Page. */
+function fitScaleFor(pg) {
+  const W = Math.max(60, scroller.clientWidth  - 24);   // 24 = marges (2 × 12 px)
+  const H = Math.max(60, scroller.clientHeight - 24);
+  let mode = V.mode;
+  if (mode === 'auto') mode = scroller.clientWidth <= scroller.clientHeight ? 'width' : 'page';
+  const sw = W / pg.w, sh = H / pg.h;
+  return mode === 'width' ? sw : Math.min(sw, sh);
+}
+
+/** Recalcule la taille de toutes les pages en gardant la même position de lecture. */
+function layoutPages() {
+  if (!V.pages.length) return;
+  const anchor = getAnchor();
+  for (const pg of V.pages) {
+    pg.scale = fitScaleFor(pg) * V.zoom;
+    pg.wrap.style.width  = Math.round(pg.w * pg.scale) + 'px';
+    pg.wrap.style.height = Math.round(pg.h * pg.scale) + 'px';
+  }
+  restoreAnchor(anchor);
+  V.visible.forEach(renderPage);
+  updatePageInfo();
+}
+// « Ancre » = page située en haut de l'écran + position relative dans cette page
+function getAnchor() {
+  const top = scroller.scrollTop;
+  for (let i = 0; i < V.pages.length; i++) {
+    const w = V.pages[i].wrap;
+    if (w.offsetTop + w.offsetHeight > top) return { i, f: (top - w.offsetTop) / Math.max(1, w.offsetHeight) };
+  }
+  return { i: 0, f: 0 };
+}
+function restoreAnchor(a) {
+  const w = V.pages[a.i]?.wrap; if (!w) return;
+  scroller.scrollTop = w.offsetTop + a.f * w.offsetHeight;
+  Auto.pos = Auto.lastSet = scroller.scrollTop;
+}
+
+/** Dessine une page (PDF + annotations) à la bonne résolution pour l'écran. */
+async function renderPage(i) {
+  const pg = V.pages[i]; if (!pg) return;
+  if (pg.doneScale === pg.scale || pg.taskScale === pg.scale) return;   // déjà fait / en cours
+  pg.task?.cancel();
+
+  const scale = pg.scale;
+  let out = scale * Math.min(window.devicePixelRatio || 1, 2.5);         // netteté sur écrans Retina
+  const maxPixels = 16e6;                                                 // garde-fou mémoire
+  if (pg.w * pg.h * out * out > maxPixels) out = Math.sqrt(maxPixels / (pg.w * pg.h));
+
+  const viewport = pg.page.getViewport({ scale: out });
+  const canvas = document.createElement('canvas');                        // nouveau canvas : pas de clignotement
+  canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
+  const task = pg.page.render({ canvasContext: canvas.getContext('2d'), viewport });
+  pg.task = task; pg.taskScale = scale;
+
+  try { await task.promise; }
+  catch (e) { if (e?.name !== 'RenderingCancelledException') console.error(e); return; }
+  if (pg.task !== task || V.pages[i] !== pg) return;                      // un rendu plus récent a pris le relais
+
+  pg.task = null; pg.taskScale = null; pg.doneScale = scale;
+  pg.canvas?.remove();
+  pg.wrap.prepend(canvas); pg.canvas = canvas;
+
+  // Calque d'annotation : même résolution, par-dessus le PDF
+  pg.ann?.remove();
+  const ann = document.createElement('canvas');
+  ann.className = 'ann'; ann.width = canvas.width; ann.height = canvas.height;
+  pg.wrap.insertBefore(ann, pg.badge); pg.ann = ann;
+  drawPageAnnots(i);
+}
+
+/** Libère la mémoire d'une page qui n'est plus près de l'écran. */
+function releasePage(i) {
+  const pg = V.pages[i]; if (!pg) return;
+  pg.task?.cancel();
+  Object.assign(pg, { task: null, taskScale: null, doneScale: null });
+  pg.canvas?.remove(); pg.ann?.remove(); pg.canvas = pg.ann = null;
+}
+
+/** Page affichée au centre de l'écran (0, 1, 2…) */
+function currentPageIndex() {
+  const mid = scroller.scrollTop + scroller.clientHeight / 2;
+  for (let i = 0; i < V.pages.length; i++) {
+    const w = V.pages[i].wrap;
+    if (mid < w.offsetTop + w.offsetHeight + 6) return i;
+  }
+  return Math.max(0, V.pages.length - 1);
+}
+function updatePageInfo() { pageInfoEl.textContent = V.pages.length ? `${currentPageIndex() + 1} / ${V.pages.length}` : ''; }
+scroller.addEventListener('scroll', () => {
+  if (V.raf) return;
+  V.raf = requestAnimationFrame(() => { V.raf = 0; updatePageInfo(); });
+}, { passive: true });
+
+/* ----- Boutons de la barre : retour, ajustement, zoom ----- */
+$('#vBack').onclick = requestClose;
+$('#fitBtn').onclick = () => {
+  const order = ['auto', 'width', 'page'];
+  V.mode = order[(order.indexOf(V.mode) + 1) % order.length];
+  V.zoom = 1;
+  $('#fitLabel').textContent = FIT_LABELS[V.mode];
+  layoutPages();
+};
+const setZoom = (z) => { V.zoom = clamp(z, 0.5, 3); layoutPages(); };
+$('#zoomIn').onclick  = () => setZoom(V.zoom * 1.15);
+$('#zoomOut').onclick = () => setZoom(V.zoom / 1.15);
+scroller.addEventListener('wheel', (e) => {          // Ctrl + molette = zoom (PC)
+  if (!e.ctrlKey) return;
+  e.preventDefault(); setZoom(V.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
+}, { passive: false });
+$('#hideBar').onclick = () => viewerEl.classList.add('bar-hidden');
+$('#miniShow').onclick = () => viewerEl.classList.remove('bar-hidden');
+
+// Garde l'écran allumé pendant la lecture (si le navigateur le permet)
+let wakeLock = null;
+async function keepAwake(on) {
+  try {
+    if (on) wakeLock = await navigator.wakeLock?.request('screen');
+    else { await wakeLock?.release(); wakeLock = null; }
+  } catch (e) { /* non supporté : pas grave */ }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && V.score) keepAwake(true); });
+
+
+/* ==========================================================================
+   5. DÉFILEMENT AUTOMATIQUE
+   La vitesse (1 à 10) est exprimée en « temps par page » : 120 s / vitesse.
+     vitesse 1 → 120 s par page   |  4 → 30 s  |  10 → 12 s
+   Comme elle est liée à la hauteur de la page, elle reste la même quel que
+   soit le zoom ou la taille de l'écran. On avance à chaque image de
+   l'écran (requestAnimationFrame) pour un mouvement parfaitement fluide.
+   ========================================================================== */
+const Auto = { on: false, speed: 4, raf: 0, last: 0, pos: 0, lastSet: 0, hold: false };
+
+function pxPerSecond() {
+  const pg = V.pages[currentPageIndex()];
+  const pageHeight = pg ? pg.h * pg.scale : scroller.clientHeight;
+  return pageHeight / (120 / Auto.speed);
+}
+function autoTick(now) {
+  if (!Auto.on) return;
+  const dt = Math.min((now - Auto.last) / 1000, 0.1);   // plafonné : pas de saut après une pause d'onglet
+  Auto.last = now;
+
+  // Si l'utilisateur a fait défiler à la main, on repart de là où il est
+  if (Math.abs(scroller.scrollTop - Auto.lastSet) > 2) Auto.pos = scroller.scrollTop;
+
+  const max = scroller.scrollHeight - scroller.clientHeight;
+  if (!Auto.hold) Auto.pos = Math.min(max, Auto.pos + pxPerSecond() * dt);
+  scroller.scrollTop = Auto.pos;
+  Auto.lastSet = scroller.scrollTop;
+
+  if (Auto.pos >= max - 0.5) { autoStop(); toast('Fin de la partition'); return; }
+  Auto.raf = requestAnimationFrame(autoTick);
+}
+function autoStart() {
+  if (Auto.on || !V.pages.length) return;
+  const max = scroller.scrollHeight - scroller.clientHeight;
+  if (scroller.scrollTop >= max - 2) scroller.scrollTop = 0;      // déjà à la fin : on repart du début
+  Auto.on = true; Auto.pos = Auto.lastSet = scroller.scrollTop; Auto.last = performance.now();
+  Auto.raf = requestAnimationFrame(autoTick);
+  syncPlayButtons();
+}
+function autoStop() {
+  Auto.on = false; cancelAnimationFrame(Auto.raf);
+  syncPlayButtons();
+}
+const autoToggle = () => (Auto.on ? autoStop() : autoStart());
+function syncPlayButtons() {
+  for (const b of [$('#playBtn'), $('#miniPlay')]) {
+    b.classList.toggle('on', Auto.on);
+    setIcon(b, Auto.on ? 'pause' : 'play');
+  }
+}
+$('#playBtn').onclick = autoToggle;
+$('#miniPlay').onclick = autoToggle;
+$('#speed').addEventListener('input', (e) => {
+  Auto.speed = Number(e.target.value);
+  $('#speedVal').textContent = Auto.speed;
+  if (V.score) { V.score.speed = Auto.speed; scheduleMetaSave(); }   // la vitesse est mémorisée pour chaque morceau
+});
+// Pendant qu'un doigt touche l'écran, le défilement automatique attend
+scroller.addEventListener('touchstart', () => { Auto.hold = true; }, { passive: true });
+['touchend', 'touchcancel'].forEach((ev) => scroller.addEventListener(ev, () => { Auto.hold = false; }, { passive: true }));
+
+
+/* ==========================================================================
+   6. ANNOTATIONS
+   Un trait = { t: 'pen'|'hl', c: couleur, w: épaisseur, p: [[x, y], …] }
+   Les coordonnées x et y vont de 0 à 1 (proportion de la page) : les dessins
+   restent donc bien placés quel que soit le zoom ou la taille de l'écran.
+   ========================================================================== */
+const Ink = { tool: 'pen', color: '#e5484d', cur: null };
+const COLORS = ['#e5484d', '#3e7bfa', '#30a46c', '#f4d35e', '#111111'];
+
+// Palette de couleurs
+$('#colors').innerHTML = COLORS.map((c) => `<button class="swatch${c === Ink.color ? ' on' : ''}" data-color="${c}" style="background:${c}" title="Couleur"></button>`).join('');
+$('#colors').addEventListener('click', (e) => {
+  const b = e.target.closest('.swatch'); if (!b) return;
+  Ink.color = b.dataset.color;
+  $$('.swatch').forEach((s) => s.classList.toggle('on', s === b));
+  if (Ink.tool === 'eraser') selectTool('pen');
+});
+function selectTool(tool) {
+  Ink.tool = tool;
+  $$('[data-tool]').forEach((b) => b.classList.toggle('on', b.dataset.tool === tool));
+}
+$$('[data-tool]').forEach((b) => { b.onclick = () => selectTool(b.dataset.tool); });
+
+function setInk(on) {
+  V.ink = on;
+  viewerEl.classList.toggle('drawing', on);
+  $('#annotBar').hidden = !on;
+  $('#inkBtn').classList.toggle('on', on);
+  if (on) autoStop();          // on n'annote pas pendant que ça défile
+}
+$('#inkBtn').onclick = () => setInk(!V.ink);
+
+/** Dessine un trait sur le calque (courbe lissée). */
+function drawStroke(ctx, s, W, H) {
+  const p = s.p; if (!p.length) return;
+  ctx.save();
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = s.c; ctx.lineWidth = s.w * W;
+  if (s.t === 'hl') { ctx.globalAlpha = 0.35; ctx.lineCap = 'butt'; }   // surligneur = semi-transparent
+  ctx.beginPath();
+  ctx.moveTo(p[0][0] * W, p[0][1] * H);
+  if (p.length === 1) ctx.lineTo(p[0][0] * W + 0.01, p[0][1] * H);      // simple point
+  for (let k = 1; k < p.length - 1; k++) {
+    const mx = (p[k][0] + p[k + 1][0]) / 2 * W, my = (p[k][1] + p[k + 1][1]) / 2 * H;
+    ctx.quadraticCurveTo(p[k][0] * W, p[k][1] * H, mx, my);
+  }
+  if (p.length > 1) ctx.lineTo(p[p.length - 1][0] * W, p[p.length - 1][1] * H);
+  ctx.stroke();
+  ctx.restore();
+}
+/** Redessine tous les traits d'une page (+ le trait en cours si fourni). */
+function drawPageAnnots(i, extra) {
+  const pg = V.pages[i]; if (!pg?.ann) return;
+  const ctx = pg.ann.getContext('2d'), W = pg.ann.width, H = pg.ann.height;
+  ctx.clearRect(0, 0, W, H);
+  for (const s of V.annots.drawings[pg.num] || []) drawStroke(ctx, s, W, H);
+  if (extra) drawStroke(ctx, extra, W, H);
+}
+
+const toNorm = (e, canvas) => {
+  const r = canvas.getBoundingClientRect();
+  return [clamp((e.clientX - r.left) / r.width, 0, 1), clamp((e.clientY - r.top) / r.height, 0, 1)];
+};
+const isInkCanvas = (e) => e.target.classList?.contains('ann');
+
+// Les 3 événements ci-dessous gèrent doigt, stylet ET souris de la même façon
+pagesEl.addEventListener('pointerdown', (e) => {
+  if (!V.ink || !isInkCanvas(e)) return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  e.preventDefault();
+  const i = Number(e.target.parentElement.dataset.i);
+  e.target.setPointerCapture(e.pointerId);
+  const pt = toNorm(e, e.target);
+  if (Ink.tool === 'eraser') { Ink.cur = { i, erase: true }; eraseAt(i, pt); return; }
+  const stroke = { t: Ink.tool, c: Ink.color, w: Ink.tool === 'hl' ? 0.024 : 0.0035, p: [pt] };
+  Ink.cur = { i, stroke };
+  drawPageAnnots(i, stroke);
+});
+pagesEl.addEventListener('pointermove', (e) => {
+  if (!Ink.cur || !isInkCanvas(e)) return;
+  const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];    // tous les points intermédiaires du stylet
+  for (const ev of (events.length ? events : [e])) {
+    const pt = toNorm(ev, e.target);
+    if (Ink.cur.erase) eraseAt(Ink.cur.i, pt); else Ink.cur.stroke.p.push(pt);
+  }
+  if (!Ink.cur.erase) drawPageAnnots(Ink.cur.i, Ink.cur.stroke);
+});
+pagesEl.addEventListener('pointerup', () => {
+  const c = Ink.cur; Ink.cur = null;
+  if (!c || c.erase) return;
+  const num = V.pages[c.i].num;
+  (V.annots.drawings[num] ||= []).push(c.stroke);
+  V.history.push(num);
+  drawPageAnnots(c.i);
+  scheduleSave();
+});
+pagesEl.addEventListener('pointercancel', () => {
+  const c = Ink.cur; Ink.cur = null;
+  if (c && !c.erase) drawPageAnnots(c.i);
+});
+
+/** Gomme : supprime les traits qui passent près du doigt (rayon ≈ 14 px). */
+function eraseAt(i, pt) {
+  const pg = V.pages[i], arr = V.annots.drawings[pg.num];
+  if (!arr?.length) return;
+  const rx = 14 / (pg.w * pg.scale), ry = 14 / (pg.h * pg.scale);
+  const kept = arr.filter((s) => !s.p.some((q) => ((q[0] - pt[0]) / rx) ** 2 + ((q[1] - pt[1]) / ry) ** 2 < 1));
+  if (kept.length !== arr.length) { V.annots.drawings[pg.num] = kept; drawPageAnnots(i); scheduleSave(); }
+}
+$('#undoBtn').onclick = () => {
+  let num;
+  while ((num = V.history.pop())) {
+    const arr = V.annots.drawings[num];
+    if (arr?.length) { arr.pop(); drawPageAnnots(num - 1); scheduleSave(); return; }
+  }
+  toast('Rien à annuler');
+};
+$('#clearBtn').onclick = () => {
+  const i = currentPageIndex(), num = V.pages[i].num;
+  if (!V.annots.drawings[num]?.length) return toast('Cette page n\'a pas de dessin.');
+  if (!confirm(`Effacer tous les dessins de la page ${num} ?`)) return;
+  V.annots.drawings[num] = []; drawPageAnnots(i); scheduleSave();
+};
+
+/* ----- Sauvegarde (avec un léger délai pour ne pas écrire à chaque trait) ----- */
+function scheduleSave()     { V.dirty = true;     clearTimeout(V.saveT); V.saveT = setTimeout(saveAnnotsNow, 500); }
+function scheduleMetaSave() { V.metaDirty = true; clearTimeout(V.metaT); V.metaT = setTimeout(saveMetaNow, 500); }
+async function saveAnnotsNow() {
+  if (!V.dirty || !V.score) return;
+  const id = V.score.id, data = V.annots; V.dirty = false;
+  try { await DB.put('annots', data, id); } catch (e) { console.error(e); toast('Sauvegarde des annotations impossible.'); }
+}
+async function saveMetaNow() {
+  if (!V.metaDirty || !V.score) return;
+  const meta = V.score; V.metaDirty = false;
+  try { await DB.put('scores', meta); } catch (e) { console.error(e); }
+}
+
+/* ----- Notes textuelles : sur le morceau, ou sur une page précise ----- */
+const noteModal = $('#notesModal'), noteTarget = $('#noteTarget'), noteText = $('#noteText');
+const noteGet = (key) => key === 'song' ? (V.score.note || '') : (V.annots.notes[key] || '');
+function noteSet(key, text) {
+  if (key === 'song') { V.score.note = text; scheduleMetaSave(); return; }
+  if (text.trim()) V.annots.notes[key] = text; else delete V.annots.notes[key];
+  scheduleSave(); refreshBadges();
+}
+function refreshBadges() { V.pages.forEach((pg) => { pg.badge.hidden = !V.annots.notes[pg.num]; }); }
+
+function openNotes(key = 'song') {
+  if (!V.score) return;
+  noteTarget.innerHTML = '<option value="song">Le morceau entier</option>' +
+    V.pages.map((pg) => `<option value="${pg.num}">Page ${pg.num}${V.annots.notes[pg.num] ? '  •' : ''}</option>`).join('');
+  noteTarget.value = key; noteText.value = noteGet(key);
+  noteModal.hidden = false; noteText.focus();
+}
+function closeNotes() { noteModal.hidden = true; }
+noteTarget.onchange = () => { noteText.value = noteGet(noteTarget.value); };
+noteText.addEventListener('input', () => noteSet(noteTarget.value, noteText.value));
+$('#notesBtn').onclick = () => openNotes('song');
+$('#notesClose').onclick = closeNotes;
+noteModal.addEventListener('pointerdown', (e) => { if (e.target === noteModal) closeNotes(); });
+
+
+/* ==========================================================================
+   7. RACCOURCIS CLAVIER + DÉMARRAGE
+   ========================================================================== */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { if (!noteModal.hidden) closeNotes(); else if (V.score) requestClose(); return; }
+  if (!V.score || !noteModal.hidden || e.target.closest?.('input[type=search],textarea,select')) return;
+  if (e.code === 'Space') { e.preventDefault(); autoToggle(); }
+  else if (e.key === '+' || e.key === '=') { $('#speed').stepUp();   $('#speed').dispatchEvent(new Event('input')); }
+  else if (e.key === '-')                  { $('#speed').stepDown(); $('#speed').dispatchEvent(new Event('input')); }
+  else if (e.key.toLowerCase() === 'f')    { $('#fitBtn').click(); }
+});
+document.addEventListener('keyup', (e) => { if (V.score && e.code === 'Space') e.preventDefault(); });
+
+(async function init() {
+  hydrateIcons();
+  navigator.storage?.persist?.();            // demande au navigateur de ne pas effacer les partitions
+  try { await refreshLibrary(); }
+  catch (e) { console.error(e); toast('Stockage local indisponible : ' + e.message, 8000); }
+})();
+</script>
+<script>
+/* Installation en application + fonctionnement hors-ligne */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

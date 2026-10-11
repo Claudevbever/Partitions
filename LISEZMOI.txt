@@ -1,0 +1,34 @@
+MES PARTITIONS - version à héberger (PWA)
+=========================================
+
+Contenu du dossier (ne renommez rien) :
+  index.html     -> votre application
+  manifest.json  -> la "carte d'identité" de l'application
+  sw.js          -> permet l'utilisation hors-ligne
+  icons/         -> les icônes
+  lib/           -> (facultatif) fichiers pdf.js pour le 100 % hors-ligne
+  .nojekyll      -> fichier vide, à laisser
+
+ÉTAPE 1 - Mettre le dossier en ligne gratuitement (GitHub Pages)
+  1. Créez un compte gratuit sur github.com.
+  2. Cliquez sur "+" puis "New repository". Nom : partitions. Cochez "Public". Créez.
+  3. Cliquez sur "uploading an existing file".
+  4. Glissez TOUT le contenu du dossier (index.html, manifest.json, sw.js,
+     les dossiers icons et lib, et .nojekyll). Cliquez "Commit changes".
+  5. Allez dans Settings > Pages. Sous "Branch", choisissez "main" puis "Save".
+  6. Attendez 1 à 2 minutes. L'adresse apparaît :
+     https://VOTRE-NOM.github.io/partitions/
+  7. Ouvrez-la sur votre tablette : l'application doit s'afficher.
+
+ÉTAPE 2 - Créer l'APK avec PWABuilder
+  1. Allez sur pwabuilder.com.
+  2. Collez votre adresse GitHub Pages, cliquez "Start".
+  3. Cliquez "Package for stores", puis "Android" > "Generate Package".
+  4. Choisissez le format APK (ou "Other Android" pour un APK direct).
+  5. Téléchargez le zip, ouvrez-le : l'APK est dedans.
+
+(Facultatif) Hors-ligne complet pour la lecture des PDF
+  Téléchargez ces deux fichiers et mettez-les dans le dossier lib/ avant l'étape 1 :
+  https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js
+  https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js
+  (clic droit > "Enregistrer sous").
